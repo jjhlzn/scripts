@@ -15,11 +15,12 @@ TIME_OUT_SECOND = 1
 SEND_INTERVAL = 10 * 60   #单位秒
 WEB_NAME = '官网'
 HOST = "218.244.149.169"
+DATABASE_FILE = '/home/jjh/script/monitor.db'
 
 def init():
 	#判断发送表是否存在
 	try:
-		con = lite.connect('monitor.db')
+		con = lite.connect(DATABASE_FILE)
 		cur = con.cursor()  
 		cur.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='SEND_RECORD'")
 		rows = cur.fetchall()
@@ -55,14 +56,14 @@ mail_postfix="163.com"  #发件箱的后缀
 
 def log_problem(content):
 	sql = "insert into PROBLEM (HOST_NAME, HAPPEN_TIME, CONTENT) values ('"+HOST+WEB_NAME+"', '"+str(datetime.datetime.now())+"','"+content+"')"
-	con = lite.connect('monitor.db')
+	con = lite.connect(DATABASE_FILE)
 	with con:
 		cur = con.cursor()    
 		cur.execute(sql)
 
 def log_send_record(type,content):
 	sql = "insert into SEND_RECORD (HOST_NAME, REPORT_TIME, TYPE, CONTENT) values ('"+HOST+WEB_NAME+"', '"+str(datetime.datetime.now())+"', '"+type+"', '"+content+"')"
-	con = lite.connect('monitor.db')
+	con = lite.connect(DATABASE_FILE)
 	with con:
 		cur = con.cursor()    
 		cur.execute(sql)
@@ -74,7 +75,7 @@ def can_send(type):
 	if now > today0am and now < today6am:
 		return False
 	sql = "select REPORT_TIME from SEND_RECORD where HOST_NAME='"+HOST+WEB_NAME+"' and TYPE ='"+type+"' order by REPORT_TIME desc"
-	con = lite.connect('monitor.db')
+	con = lite.connect(DATABASE_FILE)
 	with con:
 		cur = con.cursor()
 		cur.execute(sql)
@@ -147,7 +148,7 @@ if has_exception or (res.status != 200):
 	has_error = True
 elif second > TIME_OUT_SECOND:
 	#服务器有性能问题
-	sms_contents = WEB_NAME+'('+HOST+')性能有问题，响应时间>'+str(TIME_OUT_SECOND)+'s'
+	sms_contents = WEB_NAME+'('+HOST+')性能有问题，响应时间('+str(second)+')>'+str(TIME_OUT_SECOND)+'s'
 	sub = WEB_NAME+'性能有问题'
 	has_error = True
 
