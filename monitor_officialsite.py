@@ -11,11 +11,12 @@ from email.mime.text import MIMEText
 import sqlite3 as lite
 import sys
 
-TIME_OUT_SECOND = 1
+TIME_OUT_SECOND = 2
 SEND_INTERVAL = 10 * 60   #单位秒
-WEB_NAME = '官网'
+WEB_NAME = u'官网'
 HOST = "218.244.149.169"
 DATABASE_FILE = '/home/jjh/script/monitor.db'
+#DATABASE_FILE = 'monitor.db'
 
 def init():
 	#判断发送表是否存在
@@ -143,13 +144,13 @@ print "get response time is "+str(second)+"s"
 has_error = False
 if has_exception or (res.status != 200):
 	#服务器有异常
-	sms_contents = WEB_NAME+'('+HOST+')无法服务'
-	sub = WEB_NAME+'无法服务'
+	sms_contents = WEB_NAME+'('+HOST+u')无法服务'
+	sub = WEB_NAME+u'无法服务'
 	has_error = True
 elif second > TIME_OUT_SECOND:
 	#服务器有性能问题
-	sms_contents = WEB_NAME+'('+HOST+')性能有问题，响应时间('+str(second)+')>'+str(TIME_OUT_SECOND)+'s'
-	sub = WEB_NAME+'性能有问题'
+	sms_contents = WEB_NAME+'('+HOST+u')性能有问题，响应时间('+str(second)+')>'+str(TIME_OUT_SECOND)+'s'
+	sub = WEB_NAME+u'性能有问题'
 	has_error = True
 
 if has_error:

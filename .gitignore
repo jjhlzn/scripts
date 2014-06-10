@@ -2,6 +2,9 @@
 ## Eclipse
 #################
 
+*.exe
+*.db
+
 *.pydevproject
 .project
 .metadata
