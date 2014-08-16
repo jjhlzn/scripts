@@ -14,7 +14,7 @@ import sys
 TIME_OUT_SECOND = 2
 SEND_INTERVAL = 10 * 60   #单位秒
 WEB_NAME = u'官网'
-HOST = "218.244.149.169"
+HOST = "localhost:58781"
 DATABASE_FILE = '/home/jjh/script/monitor.db'
 #DATABASE_FILE = 'monitor.db'
 
@@ -47,7 +47,7 @@ def init():
 		if con:
 			con.close() 
 			
-init()
+#init()
 
 mailto_list=['jinjunhang@hotmail.com'] 
 mail_host="smtp.163.com"  #设置服务器
@@ -124,7 +124,45 @@ def send_mail(to_list,sub,content):
 def send_report(to_list,sub,content):  
 	send_mail(to_list,sub,content)
 	#send_sms(content)
+	
+def get_unsendsms_order_count():
+	conn = httplib.HTTPConnection(HOST)
+	try:
+		conn.request("GET", "/Order2011/Interface/service.aspx?action=GetUnsendSmsOrderCount&data={}")
+		res = conn.getresponse()
+		data = res.read()
+		json_obj = json.loads(data)
+		print "count = %s" % json_obj['Count']
+		return json_obj['Count']
+	except Exception, e:
+		print e
+		return 0
 
+def send_digitalticket():
+	conn = httplib.HTTPConnection(HOST)
+	try:
+		conn.request("GET", "/Order2011/Interface/service.aspx?action=ResendDigitalTicketForRecentlyOrders&data={}")
+		res = conn.getresponse()
+		data = res.read()
+		print data
+	except Exception, e:
+		print e
+	
+def main():
+	conn = httplib.HTTPConnection(HOST)
+	try:
+		count = get_unsendsms_order_count():
+		if count == 0:
+			print "all orders has sent sms"
+		else:
+			print "there is %d order not send sms" % count
+			send_digitalticket()
+	except Exception, e:
+		print e
+		return
+
+main()
+"""
 has_exception = False
 begin_time = datetime.datetime.now()
 conn = httplib.HTTPConnection(HOST)
@@ -156,7 +194,7 @@ elif second > TIME_OUT_SECOND:
 if has_error:
 	log_problem(sms_contents)
 	send_report(mailto_list,sub,sms_contents)
-	
+"""
 
 
 
