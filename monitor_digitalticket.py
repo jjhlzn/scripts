@@ -8,46 +8,9 @@ import json
 import smtplib  
 from email.mime.text import MIMEText  
 
-import sqlite3 as lite
 import sys
 
-TIME_OUT_SECOND = 2
-SEND_INTERVAL = 10 * 60   #单位秒
-WEB_NAME = u'官网'
-HOST = "localhost:58781"
-DATABASE_FILE = '/home/jjh/script/monitor.db'
-#DATABASE_FILE = 'monitor.db'
-
-def init():
-	#判断发送表是否存在
-	try:
-		con = lite.connect(DATABASE_FILE)
-		cur = con.cursor()  
-		cur.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='SEND_RECORD'")
-		rows = cur.fetchall()
-		is_table_exist = rows[0][0] > 0
-		if not is_table_exist:
-			 cur.executescript("""
-				CREATE TABLE SEND_RECORD(Id INTEGER PRIMARY KEY, HOST_NAME TEXT, REPORT_TIME timestamp, TYPE TEXT, CONTENT TEXT);
-				""")
-		cur.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='PROBLEM'")
-		rows = cur.fetchall()
-		is_table_exist = rows[0][0] > 0
-		if not is_table_exist:
-			 cur.executescript("""
-				CREATE TABLE PROBLEM(Id INTEGER PRIMARY KEY, HOST_NAME TEXT, HAPPEN_TIME timestamp, CONTENT TEXT);
-				""")
-		con.commit()
-	except lite.Error, e:
-		if con:
-			con.rollback()
-		print "Error %s:" % e.args[0]
-		sys.exit(1)
-	finally:
-		if con:
-			con.close() 
-			
-#init()
+HOST = "10.1.36.168:8888"
 
 mailto_list=['jinjunhang@hotmail.com'] 
 mail_host="smtp.163.com"  #设置服务器
@@ -55,55 +18,7 @@ mail_user="hengdianworld1"    #用户名
 mail_pass="abc123"   #口令 
 mail_postfix="163.com"  #发件箱的后缀
 
-def log_problem(content):
-	sql = "insert into PROBLEM (HOST_NAME, HAPPEN_TIME, CONTENT) values ('"+HOST+WEB_NAME+"', '"+str(datetime.datetime.now())+"','"+content+"')"
-	con = lite.connect(DATABASE_FILE)
-	with con:
-		cur = con.cursor()    
-		cur.execute(sql)
-
-def log_send_record(type,content):
-	sql = "insert into SEND_RECORD (HOST_NAME, REPORT_TIME, TYPE, CONTENT) values ('"+HOST+WEB_NAME+"', '"+str(datetime.datetime.now())+"', '"+type+"', '"+content+"')"
-	con = lite.connect(DATABASE_FILE)
-	with con:
-		cur = con.cursor()    
-		cur.execute(sql)
-		
-def can_send(type):
-	now = datetime.datetime.now()
-	today6am = now.replace(hour=6,minute=0,second=0,microsecond=0)
-	today0am = now.replace(hour=0,minute=0,second=0,microsecond=0)
-	if now > today0am and now < today6am:
-		return False
-	sql = "select REPORT_TIME from SEND_RECORD where HOST_NAME='"+HOST+WEB_NAME+"' and TYPE ='"+type+"' order by REPORT_TIME desc"
-	con = lite.connect(DATABASE_FILE)
-	with con:
-		cur = con.cursor()
-		cur.execute(sql)
-		rows = cur.fetchall()
-		if len(rows) == 0:
-			return True
-		last_time = rows[0][0]
-		seconds = (datetime.datetime.now() -  datetime.datetime.strptime( last_time[0:last_time.find('.')].encode(),'%Y-%m-%d %H:%M:%S')).total_seconds()
-		print 'last send time: ' + str(seconds)+"s ago"
-		if seconds < SEND_INTERVAL:
-			return False
-		return True;
-
-def send_sms(contents):
-	if not can_send('SMS'):
-		return;
-	url = 'http://e.hengdianworld.com/sendsms.aspx?phone=13706794299&content='+contents+'&sc=hengdian86547211jjh'
-	#print url
-	js = json.load(urllib2.urlopen(url))
-	if js['status'] != 0:
-		print 'sms send fail'
-	else:
-		log_send_record('SMS',contents)
-
 def send_mail(to_list,sub,content): 
-	if not can_send('EMAIL'):
-		return;
 	me="hengdianworld1"+"<"+mail_user+"@"+mail_postfix+">"  
 	msg = MIMEText(content,_subtype='plain',_charset='gb2312')  
 	msg['Subject'] = sub  
@@ -115,20 +30,15 @@ def send_mail(to_list,sub,content):
 		server.login(mail_user,mail_pass)  
 		server.sendmail(me, to_list, msg.as_string())
 		server.close()
-		log_send_record('EMAIL',content)
 		return True  
 	except Exception, e:  
 		print str(e)  
 		return False  
 		
-def send_report(to_list,sub,content):  
-	send_mail(to_list,sub,content)
-	#send_sms(content)
-	
 def get_unsendsms_order_count():
 	conn = httplib.HTTPConnection(HOST)
 	try:
-		conn.request("GET", "/Order2011/Interface/service.aspx?action=GetUnsendSmsOrderCount&data={}")
+		conn.request("GET", "/Interface/service.aspx?action=GetUnsendSmsOrderCount&data={}")
 		res = conn.getresponse()
 		data = res.read()
 		json_obj = json.loads(data)
@@ -141,7 +51,7 @@ def get_unsendsms_order_count():
 def send_digitalticket():
 	conn = httplib.HTTPConnection(HOST)
 	try:
-		conn.request("GET", "/Order2011/Interface/service.aspx?action=ResendDigitalTicketForRecentlyOrders&data={}")
+		conn.request("GET", "/Interface/service.aspx?action=ResendDigitalTicketForRecentlyOrders&data={}")
 		res = conn.getresponse()
 		data = res.read()
 		print data
@@ -151,50 +61,22 @@ def send_digitalticket():
 def main():
 	conn = httplib.HTTPConnection(HOST)
 	try:
-		count = get_unsendsms_order_count():
+		count = get_unsendsms_order_count()
 		if count == 0:
 			print "all orders has sent sms"
 		else:
 			print "there is %d order not send sms" % count
+			if count > 10:
+				send_mail(['jinjunhang@hotmail.com'], u'预定系统：大量订单电子门票重新发送提醒！', u"有%d个订单的电子票需要重新发送！" % count)
 			send_digitalticket()
+			count = get_unsendsms_order_count()
+			if count > 0:
+				send_mail(['jinjunhang@hotmail.com'], u'预定系统：电子门票发送失败！', u"有%d个订单的电子票发送失败！" % count)
 	except Exception, e:
 		print e
 		return
 
 main()
-"""
-has_exception = False
-begin_time = datetime.datetime.now()
-conn = httplib.HTTPConnection(HOST)
-try:
-	conn.request("GET", "/")
-	res = conn.getresponse()
-except Exception, e:
-	print e
-	has_exception = True
-	
-end_time = datetime.datetime.now()
-second = (end_time - begin_time).total_seconds()
-if not has_exception:
-	print "status code: "+ str(res.status)
-print "get response time is "+str(second)+"s"
-
-has_error = False
-if has_exception or (res.status != 200):
-	#服务器有异常
-	sms_contents = WEB_NAME+'('+HOST+u')无法服务'
-	sub = WEB_NAME+u'无法服务'
-	has_error = True
-elif second > TIME_OUT_SECOND:
-	#服务器有性能问题
-	sms_contents = WEB_NAME+'('+HOST+u')性能有问题，响应时间('+str(second)+')>'+str(TIME_OUT_SECOND)+'s'
-	sub = WEB_NAME+u'性能有问题'
-	has_error = True
-
-if has_error:
-	log_problem(sms_contents)
-	send_report(mailto_list,sub,sms_contents)
-"""
 
 
 
