@@ -37,6 +37,10 @@ def daily_report(date):
 	print "total_order_count = %d" % total_order_count
 	sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk where DDate = %s and substring(sellid,0,2) = 'V' and Flag in (0, 1)"
 	success_order_count = get_value_from_order(sql, date)
+	sql = "select SUM(DDjNumber) from  hdbusiness.dbo.tbdVisitorOk where DDate = %s and substring(sellid,0,2) = 'V' and Flag in (0, 1)"
+	total_people_count = get_value_from_order(sql, date)
+	sql = "select SUM(DAmount) from  hdbusiness.dbo.tbdVisitorOk where DDate = %s and substring(sellid,0,2) = 'V' and Flag in (0, 1)"
+	total_money = get_value_from_order(sql, date)
 	sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk where DDate = %s and substring(sellid,0,2) = 'V' and Flag in (0, 1) and device = 1"
 	mobile_order_count = get_value_from_order(sql, date)
 	sql = "select sType, COUNT(*) as order_count, SUM(DDjNumber) as people_num, SUM(DAmount) as total_money \
@@ -76,9 +80,31 @@ def daily_report(date):
 	sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk where DDate = %s and substring(sellid,0,2) = 'V' \
           and Flag in (0, 1) and DMemo like '%订单来自接口同步%'"
 	interface_order_count = get_value_from_order(sql, date)
+	sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk a where DDate = %s and \
+		   substring(sellid,0,2) = 'V' and Flag in (0, 1) and a.SellID in (select SellID from tbdVisitorOkOther b \
+		   where b.DBookType in (2, 3))"
+	backend_order_count = get_value_from_order(sql, date)
 	
-   
-   
-   
-
+	sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk a where DDate = %s and  \
+		  substring(sellid,0,2) = 'V' and Flag in (0, 1) and DTravelNo in ('330783018100')"
+	officialsite_order_count = get_value_from_order(sql, date)
+	
+	sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk a where DDate = %s and  \
+           substring(sellid,0,2) = 'V' and Flag in (0, 1) and DTravelNo in ( '330783021600', '333100070900','330101068700','3307JH001200')"
+	taobao_order_count = get_value_from_order(sql, date)
+	
+	sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk a where DDate = %s and \
+		   substring(sellid,0,2) = 'V' and Flag in (0, 1) and DTravelNo not in ( '330783021600', '333100070900','330101068700','3307JH001200', '330783018100')"
+	agent_order_count = get_value_from_order(sql, date)
+	
+	sql = "insert into report.dbo.t_ordersystem_dailyorder (order_date, total_order_count, success_order_count, people_count, total_money, \
+		   mobile_order_count, ticket_order_count, hotel_order_count, package_order_count, package_order_hotelnights_morethan2_count, \
+		   paywhencome_order_count, interface_order_count, backend_order_count, officialsite_order_count, agent_order_count, taobao_order_count, \
+		   favor_order_count, total_favor_money) values ('%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)" % \
+		   (date, total_order_count, success_order_count, total_people_count, total_money, mobile_order_count, ticket_order_count, \
+			hotel_order_count, package_order_count, package_order_hotelnights_morethan2_count, paywhencome_order_count, interface_order_count, \
+			backend_order_count, officialsite_order_count, agent_order_count, taobao_order_count, 0, 0)
+	conn = get_connection()
+	conn.execute_non_query(sql)
+	conn.close()
 daily_report('2014-7-1')

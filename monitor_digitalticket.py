@@ -10,7 +10,7 @@ from email.mime.text import MIMEText
 
 import sys
 
-HOST = "10.1.36.168:8888"
+HOST = "e.hengdianworld.com"
 
 mailto_list=['jinjunhang@hotmail.com'] 
 mail_host="smtp.163.com"  #设置服务器
