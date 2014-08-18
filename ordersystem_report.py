@@ -1,5 +1,6 @@
 #coding:UTF-8
 import _mssql 
+import time
 
 server = '127.0.0.1'
 user = 'sa'
@@ -38,9 +39,13 @@ def daily_report(date):
 	sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk where DDate = %s and substring(sellid,0,2) = 'V' and Flag in (0, 1)"
 	success_order_count = get_value_from_order(sql, date)
 	sql = "select SUM(DDjNumber) from  hdbusiness.dbo.tbdVisitorOk where DDate = %s and substring(sellid,0,2) = 'V' and Flag in (0, 1)"
-	total_people_count = get_value_from_order(sql, date)
+	total_people_count = get_value_from_order(sql, date) 
+	if total_people_count is None:
+		total_people_count = 0
 	sql = "select SUM(DAmount) from  hdbusiness.dbo.tbdVisitorOk where DDate = %s and substring(sellid,0,2) = 'V' and Flag in (0, 1)"
 	total_money = get_value_from_order(sql, date)
+	if total_money is None:
+		total_money = 0
 	sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk where DDate = %s and substring(sellid,0,2) = 'V' and Flag in (0, 1) and device = 1"
 	mobile_order_count = get_value_from_order(sql, date)
 	sql = "select sType, COUNT(*) as order_count, SUM(DDjNumber) as people_num, SUM(DAmount) as total_money \
@@ -97,6 +102,7 @@ def daily_report(date):
 		   substring(sellid,0,2) = 'V' and Flag in (0, 1) and DTravelNo not in ( '330783021600', '333100070900','330101068700','3307JH001200', '330783018100')"
 	agent_order_count = get_value_from_order(sql, date)
 	
+	
 	sql = "insert into report.dbo.t_ordersystem_dailyorder (order_date, total_order_count, success_order_count, people_count, total_money, \
 		   mobile_order_count, ticket_order_count, hotel_order_count, package_order_count, package_order_hotelnights_morethan2_count, \
 		   paywhencome_order_count, interface_order_count, backend_order_count, officialsite_order_count, agent_order_count, taobao_order_count, \
@@ -107,4 +113,15 @@ def daily_report(date):
 	conn = get_connection()
 	conn.execute_non_query(sql)
 	conn.close()
-daily_report('2014-7-1')
+	
+def next_day(d):
+	return time.localtime(time.mktime(d) + 24 * 60 *60)
+
+def init(from_date):
+	d = time.strptime(from_date, '%Y-%m-%d')
+	c = time.mktime(time.localtime())
+	while time.mktime(d) <= c :
+		daily_report(time.strftime('%Y-%m-%d', d))
+		d = next_day(d)
+
+init('2014-1-1')
