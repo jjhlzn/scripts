@@ -6,26 +6,23 @@ server = '127.0.0.1'
 user = 'sa'
 password = '123456'
 
-
 def get_connection():
     conn = _mssql.connect(server=server, user=user, password=password, database='hdbusiness', charset="utf8")
     return conn
 
-
-def get_one_row_from_order(sql, parameter):
+def get_one_row_from_order(sql, params):
     data = {}
     conn = get_connection()
-    row = conn.execute_row(sql, parameter)
+
+    row = conn.execute_row(sql, params)
     if row is not None:
         data = row
     conn.close()
     return data
 
-
-def get_value_from_order(sql, parameter):
-    row = get_one_row_from_order(sql, parameter)
+def get_value_from_order(sql, params):
+    row = get_one_row_from_order(sql, params)
     return row[0]
-
 
 def get_rows_from_orders(sql, parameter):
     data = []
@@ -36,25 +33,32 @@ def get_rows_from_orders(sql, parameter):
     conn.close()
     return data
 
+def daily_report_using_order_date(date):
+    daily_report('OrderDate', date)
 
-def daily_report(date):
-    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk where DDate = %s and substring(sellid,0,2) = 'V'"
+def daily_report(datetype, date):
+    dateField = ''
+    if datetype == 'OrderDate':
+        dateField = 'DDate'
+    else:
+        dateField = 'DComeDate'
+    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk where "+dateField+" = %s and substring(sellid,0,2) = 'V'"
     total_order_count = get_value_from_order(sql, date)
     print "total_order_count = %d" % total_order_count
-    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk where DDate = %s and substring(sellid,0,2) = 'V' and Flag in (0, 1)"
+    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk where "+dateField+" = %s and substring(sellid,0,2) = 'V' and Flag in (0, 1)"
     success_order_count = get_value_from_order(sql, date)
-    sql = "select SUM(DDjNumber) from  hdbusiness.dbo.tbdVisitorOk where DDate = %s and substring(sellid,0,2) = 'V' and Flag in (0, 1)"
+    sql = "select SUM(DDjNumber) from  hdbusiness.dbo.tbdVisitorOk where "+dateField+" = %s and substring(sellid,0,2) = 'V' and Flag in (0, 1)"
     total_people_count = get_value_from_order(sql, date)
     if total_people_count is None:
         total_people_count = 0
-    sql = "select SUM(DAmount) from  hdbusiness.dbo.tbdVisitorOk where DDate = %s and substring(sellid,0,2) = 'V' and Flag in (0, 1)"
+    sql = "select SUM(DAmount) from  hdbusiness.dbo.tbdVisitorOk where "+dateField+" = %s and substring(sellid,0,2) = 'V' and Flag in (0, 1)"
     total_money = get_value_from_order(sql, date)
     if total_money is None:
         total_money = 0
-    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk where DDate = %s and substring(sellid,0,2) = 'V' and Flag in (0, 1) and device = 1"
+    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk where "+dateField+" = %s and substring(sellid,0,2) = 'V' and Flag in (0, 1) and device = 1"
     mobile_order_count = get_value_from_order(sql, date)
     sql = "select sType, COUNT(*) as order_count, SUM(DDjNumber) as people_num, SUM(DAmount) as total_money \
-		   from  hdbusiness.dbo.tbdVisitorOk where DDate = %s and substring(sellid,0,2) = 'V' and Flag in (0, 1) group by sType"
+		   from  hdbusiness.dbo.tbdVisitorOk where "+dateField+" = %s and substring(sellid,0,2) = 'V' and Flag in (0, 1) group by sType"
     data = get_rows_from_orders(sql, date)
     ticket_order_count = 0
     ticket_people_num = 0
@@ -80,30 +84,33 @@ def daily_report(date):
             package_order_count = item['order_count']
             package_people_num = item['people_num']
             package_total_money = item['total_money']
-    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk a where DDate = %s and substring(sellid,0,2) = 'V' \
+    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk a where "+dateField+" = %s and substring(sellid,0,2) = 'V' \
 	      and Flag in (0, 1) and sType = '套餐' and exists (select * from hdbusiness.dbo.tbdVisitorOkHotel b where b.DHotelNight >= 2 and b.SellID = a.SellID)"
     package_order_hotelnights_morethan2_count = get_value_from_order(sql, date)
-    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk where DDate = %s and DAdvanceAmount = 0 and \
+    print 'package_order_hotelnights_morethan2_count = %d' % package_order_hotelnights_morethan2_count
+
+    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk where "+dateField+" = %s and DAdvanceAmount = 0 and \
          substring(sellid,0,2) = 'V' and Flag in (0, 1)"
     paywhencome_order_count = get_value_from_order(sql, date)
 
-    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk where DDate = %s and substring(sellid,0,2) = 'V' \
+    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk where "+dateField+" = %s and substring(sellid,0,2) = 'V' \
           and Flag in (0, 1) and DMemo like '%订单来自接口同步%'"
     interface_order_count = get_value_from_order(sql, date)
-    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk a where DDate = %s and \
+
+    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk a where "+dateField+" = %s and \
 		   substring(sellid,0,2) = 'V' and Flag in (0, 1) and a.SellID in (select SellID from tbdVisitorOkOther b \
 		   where b.DBookType in (2, 3))"
     backend_order_count = get_value_from_order(sql, date)
 
-    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk a where DDate = %s and  \
+    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk a where "+dateField+" = %s and  \
 		  substring(sellid,0,2) = 'V' and Flag in (0, 1) and DTravelNo in ('330783018100')"
     officialsite_order_count = get_value_from_order(sql, date)
 
-    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk a where DDate = %s and  \
+    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk a where "+dateField+" = %s and  \
            substring(sellid,0,2) = 'V' and Flag in (0, 1) and DTravelNo in ( '330783021600', '333100070900','330101068700','3307JH001200')"
     taobao_order_count = get_value_from_order(sql, date)
 
-    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk a where DDate = %s and \
+    sql = "select COUNT(*) from  hdbusiness.dbo.tbdVisitorOk a where "+dateField+" = %s and \
 		   substring(sellid,0,2) = 'V' and Flag in (0, 1) and DTravelNo not in ( '330783021600', '333100070900','330101068700','3307JH001200', '330783018100')"
     agent_order_count = get_value_from_order(sql, date)
 
@@ -120,7 +127,6 @@ def daily_report(date):
     conn.execute_non_query(sql)
     conn.close()
 
-
 def next_day(d):
     return time.localtime(time.mktime(d) + 24 * 60 * 60)
 
@@ -129,8 +135,7 @@ def init(from_date):
     d = time.strptime(from_date, '%Y-%m-%d')
     c = time.mktime(time.localtime())
     while time.mktime(d) <= c:
-        daily_report(time.strftime('%Y-%m-%d', d))
+        daily_report_using_order_date(time.strftime('%Y-%m-%d', d))
         d = next_day(d)
 
-
-init('2014-1-1')
+init('2014-4-1')
