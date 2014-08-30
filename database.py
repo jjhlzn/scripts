@@ -22,10 +22,10 @@ def get_value_from_order(sql, params):
     row = get_one_row_from_order(sql, params)
     return row[0]
 
-def get_rows_from_orders(sql, parameter):
+def get_rows_from_orders(sql, params=[]):
     data = []
     conn = get_connection()
-    conn.execute_query(sql, parameter)
+    conn.execute_query(sql, params)
     for row in conn:
         data.append(row)
     conn.close()
