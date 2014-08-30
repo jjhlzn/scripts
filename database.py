@@ -30,3 +30,8 @@ def get_rows_from_orders(sql, params=[]):
         data.append(row)
     conn.close()
     return data
+
+def exec_no_query(sql, params=None):
+    conn = get_connection()
+    conn.execute_non_query(sql, params)
+    conn.close()
