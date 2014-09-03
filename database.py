@@ -18,11 +18,11 @@ def get_one_row_from_order(sql, params):
     conn.close()
     return data
 
-def get_value_from_order(sql, params):
+def get_value_from_order(sql, params=None):
     row = get_one_row_from_order(sql, params)
     return row[0]
 
-def get_rows_from_orders(sql, params=[]):
+def get_rows_from_orders(sql, params=None):
     data = []
     conn = get_connection()
     conn.execute_query(sql, params)
