@@ -20,12 +20,12 @@ def get_unhandled_phonenumbers():
     sql = """select  * from (
             select distinct SUBSTRING(DTel,0,8) as mobile7 from (
             select distinct SellID, DTel from iccard14.dbo.v_tbdTravelOkCustomer where DTel != ''
-            and SellID in (select a.SellID from iccard14.dbo.tbdTravelOk a left outer join iccard14.dbo.tbdGroupType b
+            and SellID in (select a.SellID from iccard14.dbo.v_tbdTravelOk a left outer join iccard14.dbo.tbdGroupType b
             on a.DGroupType = b.DName and a.DGroupTypeAssort = b.sType where
             a.DGroupTypeAssort = b.sType and DGroupRoomType = '网络用房')
             union
             select distinct SellID, DTel from iccard13.dbo.v_tbdTravelOkCustomer where DTel != ''
-            and SellID in (select a.SellID from iccard13.dbo.tbdTravelOk a left outer join iccard13.dbo.tbdGroupType b
+            and SellID in (select a.SellID from iccard13.dbo.v_tbdTravelOk a left outer join iccard13.dbo.tbdGroupType b
             on a.DGroupType = b.DName and a.DGroupTypeAssort = b.sType where
             a.DGroupTypeAssort = b.sType and DGroupRoomType = '网络用房')) as a ) as a where a.mobile7 not in (select phonenumber from report.dbo.t_phonenumber)
             """
@@ -36,7 +36,9 @@ def get_unhandled_phonenumbers():
 def search_phonenumber_info(phonenumber):
     #通过第三方网站查询手机信息
     conn = httplib.HTTPConnection('api.showji.com')
+    #http://api.showji.com/Locating/www.show.ji.c.o.m.aspx?m=1370659&output=json&callback=querycallback&timestamp=1410160943169
     timestamp = str(int(time.time() * 1000))
+    print '/Locating/www.show.ji.c.o.m.aspx?m='+phonenumber+'&output=json&callback=querycallback&timestamp='+timestamp
     conn.request('GET', '/Locating/www.show.ji.c.o.m.aspx?m='+phonenumber+'&output=json&callback=querycallback&timestamp='+timestamp)
     res = conn.getresponse()
 
@@ -66,5 +68,9 @@ def save_phonenumber_info(info):
     exec_no_query(sql, tuple([info['Mobile'], info['Province'], info['City'], info['AreaCode'], info['Corp'], info['Card']]))
 
 if __name__ == "__main__":
-    _main()
+    while(1):
+        try:
+            _main()
+        except Exception:
+            pass
     #search_phonenumber_info('1370679')
