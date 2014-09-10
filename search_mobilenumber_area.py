@@ -9,9 +9,12 @@ def _main():
     unhandled_phonenumbers = get_unhandled_phonenumbers()
     if unhandled_phonenumbers is None:
         return
+
+    conn = httplib.HTTPConnection('api.showji.com')
     #查询手机号码的信息
     for phonenumber in unhandled_phonenumbers:
-        phonenumber_info = search_phonenumber_info(phonenumber)
+        print phonenumber
+        phonenumber_info = search_phonenumber_info(conn, phonenumber)
         if phonenumber_info['QueryResult']:
             save_phonenumber_info(phonenumber_info)
         time.sleep(2)
@@ -33,16 +36,21 @@ def get_unhandled_phonenumbers():
     return [row['mobile7'] for row in rows]
 
 
-def search_phonenumber_info(phonenumber):
+def search_phonenumber_info(conn, phonenumber):
+    phonenumber_info = {'Mobile': phonenumber, 'QueryResult': False}
+    phonenumber = phonenumber.strip()
+    #print "len(phonenumber) = " + str(len(phonenumber))
+    if len(phonenumber) != 7:
+        print "ignore"
+        return phonenumber_info
     #通过第三方网站查询手机信息
-    conn = httplib.HTTPConnection('api.showji.com')
+
     #http://api.showji.com/Locating/www.show.ji.c.o.m.aspx?m=1370659&output=json&callback=querycallback&timestamp=1410160943169
     timestamp = str(int(time.time() * 1000))
-    print '/Locating/www.show.ji.c.o.m.aspx?m='+phonenumber+'&output=json&callback=querycallback&timestamp='+timestamp
+    #print '/Locating/www.show.ji.c.o.m.aspx?m='+phonenumber+'&output=json&callback=querycallback&timestamp='+timestamp
     conn.request('GET', '/Locating/www.show.ji.c.o.m.aspx?m='+phonenumber+'&output=json&callback=querycallback&timestamp='+timestamp)
     res = conn.getresponse()
 
-    phonenumber_info = {}
     #通过解析请求结果，获得手机号码的信息
     if res.status == 200:
         res_txt = res.read()
